@@ -11,7 +11,7 @@ public class ExcelTranslator
     private Translator translator;
     private TextTranslateOptions textTranslateOptions = new TextTranslateOptions { Formality = Formality.More };
     private string path;
-    private WorkbookPart workbookPart;
+    private WorkbookPart? workbookPart;
 
     public ExcelTranslator(string authKey, string path)
     {
@@ -24,13 +24,17 @@ public class ExcelTranslator
         using (var spreadsheetDocument = SpreadsheetDocument.Open(path, true))
         {
             this.workbookPart = spreadsheetDocument.WorkbookPart;
+            if (workbookPart == null || workbookPart.Workbook == null || workbookPart.Workbook.Sheets == null || workbookPart.SharedStringTablePart == null)
+                return;
             //var outerCount = 0;
             foreach (Sheet sheet in workbookPart.Workbook.Sheets.ChildElements)
             {
                 /*outerCount++;
                 if (outerCount > 5)
                     break;*/
-                var worksheetPart = (WorksheetPart)workbookPart.GetPartById(sheet.Id);
+                if (sheet.Id == null)
+                    continue;
+                var worksheetPart = (WorksheetPart)workbookPart.GetPartById(sheet.Id!);
                 var worksheet = worksheetPart.Worksheet;
                 var sheetData = (SheetData)worksheet.ChildElements.GetItem(4);
                 //var count = 0;
@@ -106,13 +110,13 @@ public class ExcelTranslator
 
     private SharedStringItem GetSharedStringItemById(int id)
     {
-        return workbookPart.SharedStringTablePart.SharedStringTable.Elements<SharedStringItem>().ElementAt(id);
+        return workbookPart!.SharedStringTablePart!.SharedStringTable.Elements<SharedStringItem>().ElementAt(id);
     }
 
     private int InsertSharedStringItem(string text)
     {
         // If the part does not contain a SharedStringTable, create one.
-        if (workbookPart.SharedStringTablePart.SharedStringTable == null)
+        if (workbookPart!.SharedStringTablePart!.SharedStringTable == null)
         {
             workbookPart.SharedStringTablePart.SharedStringTable = new SharedStringTable();
         }
@@ -141,17 +145,17 @@ public class ExcelTranslator
     {
         var cellReference = columnName + row.RowIndex;
         // If there is not a cell with the specified column name, insert one.  
-        if (row.Elements<Cell>().Where(c => c.CellReference.Value == cellReference).Count() > 0)
+        if (row.Elements<Cell>().Where(c => c.CellReference?.Value == cellReference).Count() > 0)
         {
-            return row.Elements<Cell>().Where(c => c.CellReference.Value == cellReference).First();
+            return row.Elements<Cell>().Where(c => c.CellReference?.Value == cellReference).First();
         }
         else
         {
             // Cells must be in sequential order according to CellReference. Determine where to insert the new cell.
-            Cell refCell = null;
+            Cell? refCell = null;
             foreach (Cell cell in row.Elements<Cell>())
             {
-                if (cell.CellReference.Value.Length == cellReference.Length)
+                if (cell.CellReference?.Value?.Length == cellReference.Length)
                 {
                     if (string.Compare(cell.CellReference.Value, cellReference, true) > 0)
                     {
