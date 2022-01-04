@@ -1,0 +1,12 @@
+{
+    "folders": [
+        {
+            "path": ".",
+            "name": "DeepL Excel"
+        },
+        {
+            "path": "/host-home-folder/deleteme/devcontainer/openxml/",
+            "name": "devcontainer setup"
+        }
+    ]
+}
