@@ -13,7 +13,7 @@
             "program": "${workspaceFolder}/bin/Debug/net6.0/deepl-excel.dll",
             "args": [
                 "/host-home-folder/Downloads/4PSGROUP_Excel _group_website_DE.xlsx",
-                "e938ad5f-c3f6-21d1-993b-2a60db7c74f4:fx"
+                "<enter your DeepL API key>"
             ],
             "cwd": "${workspaceFolder}",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
