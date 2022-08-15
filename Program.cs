@@ -1,8 +1,8 @@
 ﻿using DeepLExcel;
 
-if (args.Length < 1)
+if (args.Length < 6)
 {
-    Console.WriteLine("Usage: dotnet run <filename>");
+    Console.WriteLine("Usage: dotnet run <filename> <DeepL authkey> <skip header flag> <target column> <source language> <target language>");
 }
 else if (!File.Exists(args[0]))
 {
@@ -11,5 +11,7 @@ else if (!File.Exists(args[0]))
 else
 {
     var translator = new ExcelTranslator(args[1], args[0]);
-    await translator.TranslateFile();
+    bool skipHeader = false;
+    bool.TryParse(args[2], out skipHeader);
+    await translator.TranslateFile(skipHeader, args[3], args[4], args[5]);
 }

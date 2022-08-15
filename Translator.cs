@@ -19,7 +19,7 @@ public class ExcelTranslator
         this.path = path;
     }
 
-    public async Task TranslateFile()
+    public async Task TranslateFile(bool skipHeader, string targetColumn, string sourceLanguage, string targetLanguage)
     {
         using (var spreadsheetDocument = SpreadsheetDocument.Open(path, true))
         {
@@ -36,41 +36,55 @@ public class ExcelTranslator
                     continue;
                 var worksheetPart = (WorksheetPart)workbookPart.GetPartById(sheet.Id!);
                 var worksheet = worksheetPart.Worksheet;
-                var sheetData = (SheetData)worksheet.ChildElements.GetItem(4);
-                //var count = 0;
-                foreach (Row currentRow in sheetData.ChildElements)
+                var sheetData = (SheetData?)worksheet.ChildElements.Where(s => s is SheetData).FirstOrDefault();
+                if (sheetData == null)
                 {
-                    /*count++;
-                    if (count > 5)
-                        break;*/
-                    if (currentRow.ChildElements.Count == 0)
-                        break;
-                    var currentcell = (Cell)currentRow.ChildElements.GetItem(0);
-                    var currentcellvalue = GetCellValue(currentcell);
-                    var currenttranslatedcellvalue = string.Empty;
-                    if (currentRow.ChildElements.Count > 2)
+                    Console.WriteLine($"WARN: Can't read worksheet data!");
+                }
+                else
+                {
+                    //var count = 0;
+                    var isFirst = true;
+                    foreach (Row currentRow in sheetData.ChildElements)
                     {
-                        var currenttranslatedcell = (Cell)currentRow.ChildElements.GetItem(2);
-                        currenttranslatedcellvalue = GetCellValue(currenttranslatedcell);
-                    }
+                        if (isFirst)
+                        {
+                            isFirst = false;
+                            if (skipHeader)
+                                continue;
+                        }
+                        /*count++;
+                        if (count > 5)
+                            break;*/
+                        if (currentRow.ChildElements.Count == 0)
+                            break;
+                        var currentcell = (Cell)currentRow.ChildElements.GetItem(0);
+                        var currentcellvalue = GetCellValue(currentcell);
+                        var currenttranslatedcellvalue = string.Empty;
+                        if (currentRow.ChildElements.Count > 2)
+                        {
+                            var currenttranslatedcell = (Cell)currentRow.ChildElements.GetItem(2);
+                            currenttranslatedcellvalue = GetCellValue(currenttranslatedcell);
+                        }
 
-                    if (!(string.IsNullOrWhiteSpace(currentcellvalue) || currenttranslatedcellvalue.ToLower().StartsWith("is already on another page")))
-                    {
-                        var translated = await translator.TranslateTextAsync(
-                            currentcellvalue,
-                            LanguageCode.English,
-                            LanguageCode.German,
-                            textTranslateOptions
-                        );
+                        if (!(string.IsNullOrWhiteSpace(currentcellvalue) || currenttranslatedcellvalue.ToLower().StartsWith("is already on another page")))
+                        {
+                            var translated = await translator.TranslateTextAsync(
+                                currentcellvalue,
+                                sourceLanguage,
+                                targetLanguage,
+                                targetLanguage == "de" ? textTranslateOptions : null
+                            );
 
-                        int index = InsertSharedStringItem(translated.Text);
-                        Cell cell = InsertCellInRow(currentRow, "D", sheetData);
-                        worksheet.Save();
+                            int index = InsertSharedStringItem(translated.Text);
+                            Cell cell = InsertCellInRow(currentRow, targetColumn, sheetData);
+                            worksheet.Save();
 
-                        cell.CellValue = new CellValue(index.ToString());
-                        cell.DataType = new EnumValue<CellValues>(CellValues.SharedString);
-                        worksheet.Save();
-                        Console.WriteLine(".");
+                            cell.CellValue = new CellValue(index.ToString());
+                            cell.DataType = new EnumValue<CellValues>(CellValues.SharedString);
+                            worksheet.Save();
+                            Console.WriteLine(".");
+                        }
                     }
                 }
             }

@@ -12,8 +12,12 @@
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/bin/Debug/net6.0/deepl-excel.dll",
             "args": [
-                "/host-home-folder/Downloads/4PSGROUP_Excel _group_website_DE.xlsx",
-                "<enter your DeepL API key>"
+                "/host-home-folder/OneDrive - 4PS Group BV/Dokumente/4PS Construct/Localization/translation Spring 22/translation.xlsx",
+                "<enter your DeepL API key>",
+                "true",
+                "A",
+                "en",
+                "de"
             ],
             "cwd": "${workspaceFolder}",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
