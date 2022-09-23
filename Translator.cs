@@ -1,5 +1,5 @@
-using System.Text.RegularExpressions;
 using DeepL;
+using DeepL.Model;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -19,7 +19,12 @@ public class ExcelTranslator
         this.path = path;
     }
 
-    public async Task TranslateFile(bool skipHeader, string targetColumn, string sourceLanguage, string targetLanguage)
+    public async Task<GlossaryInfo> CreateGlossaryAsync(string name, string sourceLanguageCode, string targetLanguageCode, GlossaryEntries entries)
+    {
+        return await translator.CreateGlossaryAsync(name, sourceLanguageCode, targetLanguageCode, entries);
+    }
+
+    public async Task TranslateFile(bool skipHeader, string targetColumn, string sourceLanguage, string targetLanguage, string glossaryId)
     {
         using (var spreadsheetDocument = SpreadsheetDocument.Open(path, true))
         {
@@ -69,11 +74,14 @@ public class ExcelTranslator
 
                         if (!(string.IsNullOrWhiteSpace(currentcellvalue) || currenttranslatedcellvalue.ToLower().StartsWith("is already on another page")))
                         {
+                            var textTranslateOptions = new TextTranslateOptions();
+                            if (targetLanguage == "de") textTranslateOptions.Formality = Formality.More;
+                            if (glossaryId != null) textTranslateOptions.GlossaryId = glossaryId;
                             var translated = await translator.TranslateTextAsync(
                                 currentcellvalue,
                                 sourceLanguage,
                                 targetLanguage,
-                                targetLanguage == "de" ? textTranslateOptions : null
+                                textTranslateOptions
                             );
 
                             int index = InsertSharedStringItem(translated.Text);
@@ -183,5 +191,34 @@ public class ExcelTranslator
             row.InsertBefore(newCell, refCell);
             return newCell;
         }
+    }
+
+    public GlossaryEntries ReadGlossaryFromExcel(bool skipHeader = false)
+    {
+        var entries = new Dictionary<string, string>();
+        using (var spreadsheetDocument = SpreadsheetDocument.Open(path, false))
+        {
+            this.workbookPart = spreadsheetDocument.WorkbookPart;
+            if (workbookPart == null || workbookPart.Workbook == null || workbookPart.Workbook.Sheets == null || workbookPart.SharedStringTablePart == null)
+                return new GlossaryEntries(entries);
+            WorksheetPart worksheetPart = workbookPart.WorksheetParts.First();
+            SheetData sheetData = worksheetPart.Worksheet.Elements<SheetData>().First();
+            foreach (Row r in sheetData.Elements<Row>().Skip((skipHeader ? 1 : 0)))
+            {
+                (int currentPositionleft, int currentPositionTop) = Console.GetCursorPosition();
+                Console.Write(String.Format("Processing row {0} / {1}", r.RowIndex, sheetData.Elements<Row>().Count()));
+                Console.SetCursorPosition(currentPositionleft, currentPositionTop);
+                var cell1 = (Cell)r.ElementAt(0);
+                var cell2 = (Cell)r.ElementAt(1);
+                if (r.Elements().Count() == 3)
+                {
+                    cell1 = (Cell)r.ElementAt(1);
+                    cell2 = (Cell)r.ElementAt(2);
+                }
+                entries.Add(GetCellValue(cell1), GetCellValue(cell2));
+            }
+            Console.WriteLine();
+        }
+        return new GlossaryEntries(entries);
     }
 }
